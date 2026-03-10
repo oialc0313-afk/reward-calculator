@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>報酬計算ツール｜指名売上シミュレーター</title>
+<style>
+  :root {
+    --navy: #1B2B4B;
+    --gold: #C9A84C;
+    --light-blue: #EEF2F7;
+    --green-bg: #E8F5E9;
+    --green: #2E7D32;
+    --blue: #1565C0;
+    --yellow: #FFF9C4;
+    --border: #DDD;
+    --white: #FFFFFF;
+    --gray: #666;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Arial', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: #F0F4F8;
+    color: #222;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--navy);
+    padding: 10px 24px 4px;
+    border-bottom: 3px solid var(--gold);
+  }
+  .header-label {
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: bold;
+  }
+  .header-title {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    padding: 4px 0 10px;
+  }
+
+  /* LAYOUT */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* CARDS */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--navy);
+    color: #fff;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .card-body {
+    padding: 20px;
+  }
+
+  /* INPUT GRID */
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 580px) {
+    .input-grid { grid-template-columns: 1fr; }
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .input-group label {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--navy);
+  }
+  .input-group .hint {
+    font-size: 10px;
+    color: var(--gray);
+    margin-top: -4px;
+  }
+  .input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--yellow);
+    border: 2px solid #E0C44A;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .input-wrapper:focus-within {
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(27,43,75,0.12);
+  }
+  .input-prefix, .input-suffix {
+    padding: 0 10px;
+    background: rgba(201,168,76,0.15);
+    color: var(--navy);
+    font-weight: bold;
+    font-size: 13px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .input-wrapper input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0 10px;
+    height: 42px;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--navy);
+    text-align: right;
+    outline: none;
+    min-width: 0;
+  }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { opacity: 0.5; }
+
+  /* QUICK STATS */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr; }
+  }
+  .stat-box {
+    background: var(--light-blue);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-box.green { background: var(--green-bg); }
+  .stat-box .stat-label {
+    font-size: 11px;
+    color: var(--gray);
+    margin-bottom: 4px;
+  }
+  .stat-box .stat-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--navy);
+  }
+  .stat-box.green .stat-value { color: var(--green); }
+
+  /* COMMISSION TABLE */
+  .table-wrapper { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table th {
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 14px;
+    text-align: center;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  table th:first-child { text-align: left; }
+  table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table td:first-child { color: var(--navy); font-weight: 500; }
+  table td:not(:first-child) { text-align: right; }
+  table tr:nth-child(odd) td { background: var(--light-blue); }
+  table tr:nth-child(even) td { background: #fff; }
+  .row-bold td { font-weight: bold !important; }
+  .row-green td { background: var(--green-bg) !important; color: var(--green) !important; font-weight: bold; font-size: 14px; }
+  .row-blue td:first-child { color: var(--blue) !important; }
+  .row-blue td:not(:first-child) { color: var(--blue) !important; }
+  .row-sep td { background: #fff !important; padding: 4px 0 !important; }
+  .row-sep td:after { content: ''; display: block; height: 2px; background: var(--border); }
+
+  /* SIM HEADER */
+  .sim-header-desc {
+    font-size: 11px;
+    color: var(--gray);
+    font-style: italic;
+    padding: 8px 20px;
+    background: #FAFAFA;
+    border-bottom: 1px solid #EEE;
+  }
+
+  /* CAPACITY BAR */
+  .capacity-section {
+    padding: 0 20px 20px;
+  }
+  .month-card {
+    background: var(--light-blue);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .month-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .progress-bar-wrap {
+    background: #D0DAE8;
+    border-radius: 999px;
+    height: 14px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--navy), var(--gold));
+    transition: width 0.4s;
+  }
+  .bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--gray);
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #AAA;
+    padding-bottom: 32px;
+  }
+
+  /* CALC BTN */
+  .calc-note {
+    font-size: 11px;
+    color: var(--gray);
+    font-style: italic;
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--navy);
+    border-left: 4px solid var(--gold);
+    padding-left: 10px;
+    margin-bottom: 14px;
+  }
+
+  /* COMM BREAKDOWN */
+  .comm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #EEE;
+  }
+  .comm-row:last-child { border-bottom: none; }
+  .comm-label { font-size: 13px; color: #444; }
+  .comm-sub { font-size: 10px; color: #999; margin-top: 2px; }
+  .comm-amount { font-size: 16px; font-weight: bold; color: var(--navy); }
+  .comm-total-row {
+    background: var(--green-bg);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .comm-total-label { font-size: 13px; font-weight: bold; color: var(--green); }
+  .comm-total-amount { font-size: 22px; font-weight: 900; color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">INCOME MODEL</div>
+  <div class="header-title">報酬計算ツール</div>
+</div>
+
+<div class="container">
+
+  <!-- INPUT CARD -->
+  <div class="card">
+    <div class="card-header">⚙️ 入力項目（黄色のセルに数値を入力）</div>
+    <div class="card-body">
+      <div class="input-grid">
+
+        <div class="input-group">
+          <label>平均客単価</label>
+          <div class="hint">1名あたりの平均施術料金</div>
+          <div class="input-wrapper">
+            <span class="input-prefix">¥</span>
+            <input type="number" id="unitPrice" value="9000" min="0" step="500" oninput="calc()">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>1日平均入客数</label>
+          <div class="hint">1日に担当するお客様の人数</div>
+          <div class="input-wrapper">
+            <input type="number" id="dailyClients" value="6" min="1" max="30" oninput="calc()">
+            <span class="input-suffix">名/日</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>月新規客数</label>
+          <div class="hint">サロン全体の月間新規来店数</div>
+          <div class="input-wrapper">
+            <input type="number" id="newClientsPerMonth" value="100" min="0" oninput="calc()">
+            <span class="input-suffix">名/月</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>月勤務日数</label>
+          <div class="hint">1ヶ月の出勤日数</div>
+          <div class="input-wrapper">
+            <input type="number" id="workDays" value="22" min="1" max="31" oninput="calc()">
+            <span class="input-suffix">日</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>再来率</label>
+          <div class="hint">新規客が翌月以降に指名客になり卲合</div>
+          <div class="input-wrapper">
+            <input type="number" id="returnRate" value="40" min="0" max="100" oninput="calc()">
+            <span class="input-suffix">%</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>現在の指名客数</label>
+          <div class="hint">現時点での月間指名客数</div>
+          <div class="input-wrapper">
+            <input type="number" id="currentDesig" value="0" min="0" oninput="calc()">
+            <span class="input-suffix">名</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>指名歩合率</label>
+          <div class="hint">指名客への報酬率</div>
+          <div class="input-wrapper">
+            <input type="number" id="desigRate" value="40" min="0" max="100" oninput="calc()">
+            <span class="input-suffix">%</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>新規・フリー歩合率</label>
+          <div class="hint">新規・フリー客への報酬率</div>
+          <div class="input-wrapper">
+            <input type="number" id="freeRate" value="50" min="0" max="100" oninput="calc()">
+            <span class="input-suffix">%</span>
+          </div>
+        </div>
+
+      </div>
+      <p class="calc-note">※ 数値を変更すると自動で全て更新されます</p>
+    </div>
+  </div>
+
+  <!-- STATS CARD -->
+  <div class="card">
+    <div class="card-header">📊 月売上モデル</div>
+    <div class="card-body">
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-label">月間合計客数</div>
+          <div class="stat-value" id="totalClientsDisplay">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">月売上合計</div>
+          <div class="stat-value" id="monthlySalesDisplay">—</div>
+        </div>
+        <div class="stat-box green">
+          <div class="stat-label">合計報酬（初月）</div>
+          <div class="stat-value" id="totalCommDisplay">—</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <div class="section-title">報酬（歩合）内訳</div>
+        <div class="comm-row">
+          <div>
+            <div class="comm-label">🎯 指名売上</div>
+            <div class="comm-sub" id="desigBreakdown">—</div>
+          </div>
+          <div class="comm-amount" id="desigCommDisplay">—</div>
+        </div>
+        <div class="comm-row">
+          <div>
+            <div class="comm-label">🆕 新規・フリー売上</div>
+            <div class="comm-sub" id="freeBreakdown">—</div>
+          </div>
+          <div class="comm-amount" id="freeCommDisplay">—</div>
+        </div>
+        <div class="comm-total-row">
+          <div class="comm-total-label">💰 合計報酬（歩合）</div>
+          <div class="comm-total-amount" id="totalCommDisplay2">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIMULATION CARD -->
+  <div class="card">
+    <div class="card-header">📈 指名売上・報酬シミュレーション（累積モデル）</div>
+    <div class="sim-header-desc">指名客数が増えるにつれ、フリー枠が減少するモデル（現在の指名客数から計算）</div>
+    <div class="card-body">
+      <div class="table-wrapper">
+        <table id="simTable">
+          <thead>
+            <tr>
+              <th>項目</th>
+              <th>1ヶ月目</th>
+              <th>2ヶ月目</th>
+              <th>3ヶ月目</th>
+              <th>6ヶ月目</th>
+              <th>1年目（12ヶ月）</th>
+            </tr>
+          </thead>
+          <tbody id="simBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISUAL CAPACITY CHART -->
+  <div class="card">
+    <div class="card-header">📊 指名客数の推移（容量グラフ）</div>
+    <div class="capacity-section" id="capacityBars" style="padding-top:16px;"></div>
+  </div>
+
+  <div class="footer">報酬計算ツール｜数値を変更するとリアルタイムで更新されます</div>
+</div>
+
+<script>
+function fmt(n) {
+  return '¥' + Math.round(n).toLocaleString('ja-JP');
+}
+function fmtNum(n, dec) {
+  return n.toFixed(dec !== undefined ? dec : 1) + '名';
+}
+function fmtPct(n) {
+  return (n * 100).toFixed(1) + '%';
+}
+
+function calc() {
+  var unitPrice   = parseFloat(document.getElementById('unitPrice').value) || 0;
+  var daily       = parseFloat(document.getElementById('dailyClients').value) || 0;
+  var newPerMonth = parseFloat(document.getElementById('newClientsPerMonth').value) || 0;
+  var workDays    = parseFloat(document.getElementById('workDays').value) || 0;
+  var returnRate  = (parseFloat(document.getElementById('returnRate').value) || 0) / 100;
+  var currentD    = parseFloat(document.getElementById('currentDesig').value) || 0;
+  var desigRate   = (parseFloat(document.getElementById('desigRate').value) || 0) / 100;
+  var freeRate    = (parseFloat(document.getElementById('freeRate').value) || 0) / 100;
+
+  var totalCap    = daily * workDays;
+  var monthlySale = unitPrice * daily * workDays;
+
+  // Month indices: 1, 2, 3, 6, 12
+  var months = [1, 2, 3, 6, 12];
+
+  function desigAt(m) {
+    return Math.min(currentD + newPerMonth * returnRate * (m - 1), totalCap);
+  }
+
+  // Initial month (month 1) for stats
+  var d1 = desigAt(1);
+  var f1 = Math.max(totalCap - d1, 0);
+  var desigSale1 = d1 * unitPrice;
+  var freeSale1  = f1 * unitPrice;
+  var desigComm1 = desigSale1 * desigRate;
+  var freeComm1  = freeSale1 * freeRate;
+  var totalComm1 = desigComm1 + freeComm1;
+
+  // Update stats
+  document.getElementById('totalClientsDisplay').textContent = Math.round(totalCap) + '名';
+  document.getElementById('monthlySalesDisplay').textContent = fmt(monthlySale);
+  document.getElementById('totalCommDisplay').textContent    = fmt(totalComm1);
+  document.getElementById('totalCommDisplay2').textContent   = fmt(totalComm1);
+
+  document.getElementById('desigBreakdown').textContent =
+    fmtNum(d1) + ' × ' + fmt(unitPrice) + ' × ' + Math.round(desigRate * 100) + '%';
+  document.getElementById('freeBreakdown').textContent =
+    fmtNum(f1) + ' × ' + fmt(unitPrice) + ' × ' + Math.round(freeRate * 100) + '%';
+  document.getElementById('desigCommDisplay').textContent = fmt(desigComm1);
+  document.getElementById('freeCommDisplay').textContent  = fmt(freeComm1);
+
+  // Build simulation table
+  var rows = [];
+  var labels = ['月間合計客数', '指名客数（累積）', '新規・フリー客数',
+                '月売上合計', 'うち　指名売上', 'うち　新規フリー売上',
+                '指名売上の割合', '合計報酬（月間）'];
+
+  var data = months.map(function(m) {
+    var d = desigAt(m);
+    var fr = Math.max(totalCap - d, 0);
+    var ds = d * unitPrice;
+    var fs = fr * unitPrice;
+    var ratio = monthlySale > 0 ? ds / monthlySale : 0;
+    var comm = ds * desigRate + fs * freeRate;
+    return [totalCap, d, fr, monthlySale, ds, fs, ratio, comm];
+  });
+
+  var body = document.getElementById('simBody');
+  body.innerHTML = '';
+
+  var rowClasses = ['', '', '', '', 'row-bold', '', 'row-blue', 'row-green'];
+
+  for (var ri = 0; ri < 8; ri++) {
+    var tr = document.createElement('tr');
+    if (rowClasses[ri]) tr.className = rowClasses[ri];
+
+    var td0 = document.createElement('td');
+    td0.textContent = labels[ri];
+    tr.appendChild(td0);
+
+    for (var mi = 0; mi < 5; mi++) {
+      var td = document.createElement('td');
+      var v = data[mi][ri];
+      if (ri === 0) td.textContent = Math.round(v) + '名';
+      else if (ri === 1) td.textContent = v.toFixed(1) + '名';
+      else if (ri === 2) td.textContent = v.toFixed(1) + '名';
+      else if (ri === 3) td.textContent = fmt(v);
+      else if (ri === 4) td.textContent = fmt(v);
+      else if (ri === 5) td.textContent = fmt(v);
+      else if (ri === 6) td.textContent = (v * 100).toFixed(1) + '%';
+      else if (ri === 7) td.textContent = fmt(v);
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+
+  // Capacity bars
+  var barsDiv = document.getElementById('capacityBars');
+  barsDiv.innerHTML = '';
+  var monthLabels = ['1ヶ月目', '2ヶ月目', '3ヶ月目', '6ヶ月目', '1年目（12ヶ月）'];
+  months.forEach(function(m, i) {
+    var d = desigAt(m);
+    var pct = totalCap > 0 ? Math.min(d / totalCap * 100, 100) : 0;
+    var div = document.createElement('div');
+    div.className = 'month-card';
+    div.innerHTML =
+      '<div class="month-title">' + monthLabels[i] +
+      ' ｜ 指名 ' + d.toFixed(1) + '名 / 合計 ' + Math.round(totalCap) + '名</div>' +
+      '<div class="progress-bar-wrap"><div class="progress-bar" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+      '<div class="bar-labels"><span>指名率 ' + pct.toFixed(1) + '%</span><span>残 ' + Math.max(totalCap - d, 0).toFixed(1) + '名</span></div>';
+    barsDiv.appendChild(div);
+  });
+}
+
+// Init
+calc();
+</script>
+</body>
+</html>
